@@ -23,20 +23,33 @@ client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 def send_book_email(receiver_email):
     try:
         msg = EmailMessage()
-        msg['Subject'] = 'Your copy of Code with Destiny!'
+        msg['Subject'] = 'Your copy of Code with Destiny is here! 🎉'
         msg['From'] = SMTP_EMAIL
         msg['To'] = receiver_email
-        msg.set_content("Hi there,\n\nThank you for checking out Code with Destiny! Attached is your PDF copy of the book.\n\nHappy reading!\n- Piyush Joshi")
+        
+        # Plain text fallback
+        msg.set_content("Hi there,\n\nThank you for getting Code with Destiny! You can download your PDF copy here:\nhttps://drive.google.com/drive/folders/1ntZKalqXrz8hK3FW6GSNzfENu_vi5tOJ?usp=drive_link\n\nHappy reading!\n- Piyush Joshi")
 
-        # Read the PDF file
-        pdf_path = os.path.join(os.path.dirname(__file__), 'Code with destiny.pdf')
-        if os.path.exists(pdf_path):
-            with open(pdf_path, 'rb') as f:
-                pdf_data = f.read()
-            msg.add_attachment(pdf_data, maintype='application', pdf='pdf', filename='Code with destiny.pdf')
-        else:
-            print("PDF not found at", pdf_path)
-            return False
+        # HTML Email Template
+        html_template = """
+        <html>
+          <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="text-align: center; margin-bottom: 20px;">
+              <h2 style="color: #d9a054; font-family: Georgia, serif;">Code with Destiny</h2>
+            </div>
+            <p>Hi there,</p>
+            <p>Thank you so much for your support and for grabbing a copy of <strong>Code with Destiny</strong>!</p>
+            <p>You can download the full PDF version of the book securely from Google Drive using the link below:</p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="https://drive.google.com/drive/folders/1ntZKalqXrz8hK3FW6GSNzfENu_vi5tOJ?usp=drive_link" style="background-color: #171310; color: #dcd4c3; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; border: 1px solid #d9a054;">Download PDF Book</a>
+            </div>
+            <p>I hope you enjoy reading about the late-night coding sessions, canteen classes, and last-minute programs!</p>
+            <p>Happy coding,<br><strong>Piyush Joshi</strong></p>
+          </body>
+        </html>
+        """
+        
+        msg.add_alternative(html_template, subtype='html')
 
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
             smtp.login(SMTP_EMAIL, SMTP_PASSWORD.replace(" ", ""))
@@ -111,6 +124,27 @@ def verify_payment():
     except Exception as e:
         print(f"Error verifying payment: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/restore-access', methods=['POST'])
+def restore_access():
+    try:
+        data = request.json or {}
+        payment_id = data.get('paymentId')
+        
+        if not payment_id or not payment_id.startswith('pay_'):
+            return jsonify({'error': 'Invalid Payment ID. It must start with pay_'}), 400
+            
+        # Fetch payment details from Razorpay
+        payment = client.payment.fetch(payment_id)
+        
+        if payment and payment.get('status') in ['captured', 'authorized']:
+            return jsonify({'unlocked': True})
+        else:
+            return jsonify({'error': 'Payment found, but it was not successful.'}), 400
+            
+    except Exception as e:
+        print(f"Error restoring access: {str(e)}")
+        return jsonify({'error': 'We could not find that Payment ID. Please check and try again.'}), 404
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
