@@ -8,15 +8,18 @@ from flask_cors import CORS
 import razorpay
 from dotenv import load_dotenv
 
+import threading
+
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)
+# Restrict CORS to production and local development URLs
+CORS(app, resources={r"/api/*": {"origins": ["https://destinycodewith.vercel.app", "http://127.0.0.1:5500", "http://localhost:5500"]}})
 
-RAZORPAY_KEY_ID = os.environ.get('RAZORPAY_KEY_ID', 'rzp_live_Teq4CCRJs0S7li')
-RAZORPAY_KEY_SECRET = os.environ.get('RAZORPAY_KEY_SECRET', 'WGrlEoSdWaMsnQ9eplpTDk66')
-SMTP_EMAIL = os.environ.get('SMTP_EMAIL', 'piyush@example.com') # Replace with actual email
-SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', 'qbrv unhi pxrf fodn')
+RAZORPAY_KEY_ID = os.environ.get('RAZORPAY_KEY_ID')
+RAZORPAY_KEY_SECRET = os.environ.get('RAZORPAY_KEY_SECRET')
+SMTP_EMAIL = os.environ.get('SMTP_EMAIL')
+SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD')
 
 client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 
@@ -28,7 +31,7 @@ def send_book_email(receiver_email):
         msg['To'] = receiver_email
         
         # Plain text fallback
-        msg.set_content("Hi there,\n\nThank you for getting Code with Destiny! You can download your PDF copy here:\nhttps://drive.google.com/drive/folders/1ntZKalqXrz8hK3FW6GSNzfENu_vi5tOJ?usp=drive_link\n\nHappy reading!\n- Piyush Joshi")
+        msg.set_content("Hi there,\n\nThank you for getting Code with Destiny! Your access is now unlocked. You can download your PDF copy here:\nhttps://drive.google.com/file/d/11Hg5sZjHv0tVjgdnGPGJvQKUA9n5g-57/view?usp=drive_link\n\nHappy reading!\n- Piyush Joshi")
 
         # HTML Email Template
         html_template = """
@@ -39,9 +42,9 @@ def send_book_email(receiver_email):
             </div>
             <p>Hi there,</p>
             <p>Thank you so much for your support and for grabbing a copy of <strong>Code with Destiny</strong>!</p>
-            <p>You can download the full PDF version of the book securely from Google Drive using the link below:</p>
+            <p>Your access is now unlocked. You can read the full book directly on our website, and download the full PDF version securely from Google Drive using the link below:</p>
             <div style="text-align: center; margin: 30px 0;">
-              <a href="https://drive.google.com/drive/folders/1ntZKalqXrz8hK3FW6GSNzfENu_vi5tOJ?usp=drive_link" style="background-color: #171310; color: #dcd4c3; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; border: 1px solid #d9a054;">Download PDF Book</a>
+              <a href="https://drive.google.com/file/d/11Hg5sZjHv0tVjgdnGPGJvQKUA9n5g-57/view?usp=drive_link" style="background-color: #171310; color: #dcd4c3; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; border: 1px solid #d9a054;">Download PDF Book</a>
             </div>
             <p>I hope you enjoy reading about the late-night coding sessions, canteen classes, and last-minute programs!</p>
             <p>Happy coding,<br><strong>Piyush Joshi</strong></p>
@@ -51,7 +54,9 @@ def send_book_email(receiver_email):
         
         msg.add_alternative(html_template, subtype='html')
 
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
+        # Use Port 587 (STARTTLS) which works better on Render
+        with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
+            smtp.starttls()
             smtp.login(SMTP_EMAIL, SMTP_PASSWORD.replace(" ", ""))
             smtp.send_message(msg)
         return True
