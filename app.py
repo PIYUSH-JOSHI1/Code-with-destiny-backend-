@@ -23,7 +23,7 @@ SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD')
 
 client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 
-def send_book_email(receiver_email):
+def _send_email_task(receiver_email):
     try:
         msg = EmailMessage()
         msg['Subject'] = 'Your copy of Code with Destiny is here! 🎉'
@@ -54,14 +54,19 @@ def send_book_email(receiver_email):
         
         msg.add_alternative(html_template, subtype='html')
 
-        # Use Port 465 (SMTP_SSL) which works reliably on Render
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
+        # Added timeout=10 so it doesn't hang indefinitely
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=10) as smtp:
             smtp.login(SMTP_EMAIL, SMTP_PASSWORD)
             smtp.send_message(msg)
-        return True
+        print(f"Email sent successfully to {receiver_email}")
     except Exception as e:
         print("Failed to send email:", e)
-        return False
+
+def send_book_email(receiver_email):
+    # Run the email sending in a background thread so it doesn't block the API response
+    thread = threading.Thread(target=_send_email_task, args=(receiver_email,))
+    thread.daemon = True
+    thread.start()
 
 @app.route('/')
 def home():
