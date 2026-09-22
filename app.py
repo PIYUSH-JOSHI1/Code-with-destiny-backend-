@@ -14,7 +14,7 @@ load_dotenv()
 
 app = Flask(__name__)
 # Restrict CORS to production and local development URLs
-CORS(app, resources={r"/api/*": {"origins": ["https://destinycodewith.vercel.app", "http://127.0.0.1:5500", "http://localhost:5500"]}})
+CORS(app, resources={r"/api/*": {"origins": ["https://destinycodewith.vercel.app", "https://destinywithcode.vercel.app", "http://127.0.0.1:5500", "http://localhost:5500"]}})
 
 RAZORPAY_KEY_ID = os.environ.get('RAZORPAY_KEY_ID')
 RAZORPAY_KEY_SECRET = os.environ.get('RAZORPAY_KEY_SECRET')
