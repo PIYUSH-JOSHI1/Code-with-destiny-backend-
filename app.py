@@ -54,10 +54,9 @@ def send_book_email(receiver_email):
         
         msg.add_alternative(html_template, subtype='html')
 
-        # Use Port 587 (STARTTLS) which works better on Render
-        with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
-            smtp.starttls()
-            smtp.login(SMTP_EMAIL, SMTP_PASSWORD.replace(" ", ""))
+        # Use Port 465 (SMTP_SSL) which works reliably on Render
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
+            smtp.login(SMTP_EMAIL, SMTP_PASSWORD)
             smtp.send_message(msg)
         return True
     except Exception as e:
